@@ -1,0 +1,1283 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#14532d">
+  <title>เกม AR จัดกลุ่มสัตว์มีกระดูกสันหลัง</title>
+
+  <!-- MediaPipe Hands -->
+  <script src="https://script.google.com/a/macros/anubanamnat.ac.th/s/AKfycbz830iAGNWRidGY2qSVq4pepa0puhbL5Z-gy0JXacK6DmYe8zMpeSArCstn9o7Z7zc-iw/exec"></script>
+
+  <style>
+    :root{
+      --green-950:#052e16;
+      --green-900:#14532d;
+      --green-800:#166534;
+      --green-700:#15803d;
+      --green-500:#22c55e;
+      --lime:#bef264;
+      --sky:#38bdf8;
+      --amber:#facc15;
+      --red:#ef4444;
+      --cream:#fffce8;
+      --ink:#102a1a;
+      --glass:rgba(5,46,22,.78);
+      --glass-soft:rgba(255,255,255,.14);
+      --shadow:0 20px 55px rgba(0,0,0,.38);
+    }
+
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      font-family:"Sarabun","Noto Sans Thai",Tahoma,system-ui,sans-serif;
+      background:#04130b;
+      color:white;
+      touch-action:none;
+      user-select:none;
+      -webkit-user-select:none;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    button,input{font:inherit}
+    button{touch-action:manipulation}
+    .hidden{display:none!important}
+
+    #video{
+      position:fixed;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      transform:scaleX(-1);
+      z-index:0;
+      background:#020806;
+      filter:saturate(1.04) contrast(1.04) brightness(.82);
+    }
+
+    #backdrop{
+      position:fixed;
+      inset:0;
+      z-index:1;
+      pointer-events:none;
+      background:
+        radial-gradient(circle at 50% 42%,transparent 0 28%,rgba(3,22,12,.16) 60%,rgba(3,22,12,.54) 100%),
+        linear-gradient(90deg,rgba(3,35,17,.60),rgba(3,35,17,.05) 28%,rgba(3,35,17,.05) 72%,rgba(3,35,17,.60)),
+        linear-gradient(180deg,rgba(3,35,17,.58),transparent 30%,transparent 70%,rgba(3,35,17,.55));
+    }
+
+    #app{position:fixed;inset:0;z-index:2;overflow:hidden}
+
+    .screen{position:absolute;inset:0}
+
+    .center-panel{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      width:min(680px,90vw);
+      max-height:90vh;
+      overflow:auto;
+      padding:30px;
+      border-radius:34px;
+      text-align:center;
+      background:
+        radial-gradient(circle at top,rgba(190,242,100,.15),transparent 35%),
+        linear-gradient(145deg,rgba(20,83,45,.95),rgba(5,46,22,.94));
+      border:2px solid rgba(190,242,100,.62);
+      box-shadow:var(--shadow),inset 0 0 0 1px rgba(255,255,255,.08);
+      backdrop-filter:blur(13px);
+    }
+
+    .leaf-logo{
+      width:92px;
+      height:92px;
+      display:grid;
+      place-items:center;
+      margin:0 auto 12px;
+      border-radius:28px;
+      font-size:52px;
+      background:linear-gradient(145deg,#dcfce7,#86efac);
+      box-shadow:0 12px 35px rgba(0,0,0,.30),inset 0 0 0 3px rgba(255,255,255,.65);
+    }
+
+    .main-title{
+      margin:0;
+      font-size:clamp(32px,5vw,60px);
+      line-height:1.05;
+      font-weight:1000;
+      color:#f7fee7;
+      text-shadow:0 4px 18px rgba(0,0,0,.38);
+    }
+
+    .subtitle{
+      margin:10px auto 16px;
+      font-size:clamp(18px,2.5vw,27px);
+      line-height:1.45;
+      font-weight:800;
+      color:#d9f99d;
+      white-space:pre-line;
+    }
+
+    .topic-box{
+      margin:14px auto 18px;
+      padding:15px 18px;
+      border-radius:22px;
+      line-height:1.55;
+      font-size:clamp(16px,2vw,21px);
+      font-weight:800;
+      white-space:pre-line;
+      color:#f0fdf4;
+      background:rgba(255,255,255,.10);
+      border:1px solid rgba(220,252,231,.28);
+    }
+
+    .name-input{
+      display:block;
+      width:min(440px,92%);
+      margin:0 auto 15px;
+      padding:14px 18px;
+      border-radius:18px;
+      border:2px solid rgba(190,242,100,.58);
+      background:#f7fee7;
+      color:#14532d;
+      outline:none;
+      text-align:center;
+      font-size:18px;
+      font-weight:800;
+    }
+
+    .main-btn{
+      border:0;
+      border-radius:999px;
+      padding:15px 32px;
+      min-width:210px;
+      cursor:pointer;
+      color:#052e16;
+      font-size:clamp(20px,2.7vw,28px);
+      font-weight:1000;
+      background:linear-gradient(135deg,#bef264,#4ade80);
+      box-shadow:0 14px 32px rgba(0,0,0,.30),inset 0 0 0 2px rgba(255,255,255,.45);
+    }
+    .main-btn:active{transform:translateY(2px)}
+    .main-btn:disabled{opacity:.55;cursor:not-allowed}
+
+    .note{
+      margin:17px auto 0;
+      max-width:540px;
+      color:#dcfce7;
+      font-size:15px;
+      line-height:1.55;
+      white-space:pre-line;
+      opacity:.92;
+    }
+
+    .error-box{
+      margin:15px auto 0;
+      padding:12px 15px;
+      border-radius:16px;
+      background:rgba(127,29,29,.72);
+      border:1px solid rgba(254,202,202,.45);
+      color:#fee2e2;
+      font-weight:800;
+      line-height:1.45;
+      white-space:pre-line;
+    }
+
+    .spinner{
+      width:58px;
+      height:58px;
+      margin:0 auto 18px;
+      border-radius:50%;
+      border:7px solid rgba(255,255,255,.17);
+      border-top-color:#bef264;
+      animation:spin .9s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* GAME HUD */
+    .hud-left,.hud-right{
+      position:absolute;
+      top:max(12px,env(safe-area-inset-top));
+      z-index:20;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .hud-left{left:max(12px,env(safe-area-inset-left))}
+    .hud-right{right:max(12px,env(safe-area-inset-right));align-items:flex-end}
+
+    .chip{
+      min-width:130px;
+      padding:9px 15px;
+      border-radius:999px;
+      text-align:center;
+      font-size:clamp(17px,2vw,26px);
+      font-weight:1000;
+      color:#f7fee7;
+      background:rgba(5,46,22,.78);
+      border:1.5px solid rgba(190,242,100,.50);
+      box-shadow:0 10px 28px rgba(0,0,0,.28);
+      backdrop-filter:blur(8px);
+    }
+
+    .sound-btn{
+      border:0;
+      border-radius:999px;
+      padding:10px 14px;
+      font-size:20px;
+      cursor:pointer;
+      color:#14532d;
+      background:#f7fee7;
+      box-shadow:0 8px 24px rgba(0,0,0,.26);
+    }
+
+    .question-panel{
+      position:absolute;
+      left:50%;
+      top:max(10px,env(safe-area-inset-top));
+      transform:translateX(-50%);
+      width:min(920px,68vw);
+      min-height:122px;
+      padding:15px 24px 17px;
+      z-index:12;
+      text-align:center;
+      border-radius:30px;
+      background:linear-gradient(145deg,rgba(20,83,45,.91),rgba(5,46,22,.82));
+      border:2px solid rgba(190,242,100,.54);
+      box-shadow:0 16px 42px rgba(0,0,0,.32);
+      backdrop-filter:blur(8px);
+    }
+
+    .animal-name{
+      font-size:clamp(35px,5vw,66px);
+      line-height:1.05;
+      font-weight:1000;
+      color:#fffde7;
+      text-shadow:0 4px 18px rgba(0,0,0,.46);
+      white-space:pre-line;
+    }
+
+    .question-hint{
+      margin-top:5px;
+      color:#d9f99d;
+      font-size:clamp(15px,1.8vw,22px);
+      font-weight:900;
+    }
+
+    .timer-track{
+      width:min(680px,88%);
+      height:13px;
+      margin:10px auto 0;
+      overflow:hidden;
+      border-radius:999px;
+      background:rgba(255,255,255,.15);
+      box-shadow:inset 0 2px 7px rgba(0,0,0,.28);
+    }
+    .timer-fill{
+      width:100%;
+      height:100%;
+      border-radius:inherit;
+      background:linear-gradient(90deg,#4ade80,#facc15,#fb7185);
+      transition:width .1s linear;
+    }
+
+    #answers{position:absolute;inset:0;z-index:8}
+
+    .answer-card{
+      position:absolute;
+      width:min(335px,30vw);
+      min-height:104px;
+      padding:15px 18px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      white-space:pre-line;
+      border-radius:29px;
+      border:3px solid rgba(255,255,255,.73);
+      color:#102a1a;
+      font-size:clamp(25px,3.1vw,43px);
+      line-height:1.08;
+      font-weight:1000;
+      background:
+        radial-gradient(circle at 28% 20%,rgba(255,255,255,.48),transparent 26%),
+        linear-gradient(145deg,rgba(240,253,244,.98),rgba(134,239,172,.95));
+      box-shadow:0 18px 44px rgba(0,0,0,.34),inset 0 0 0 2px rgba(255,255,255,.42);
+      transition:transform .14s ease,filter .14s ease,box-shadow .14s ease;
+    }
+
+    .answer-card.hover{
+      transform:scale(1.055);
+      filter:brightness(1.09);
+      box-shadow:0 24px 60px rgba(0,0,0,.44),0 0 0 9px rgba(250,204,21,.25),inset 0 0 0 2px rgba(255,255,255,.52);
+    }
+    .answer-card.correct{
+      background:linear-gradient(145deg,#ecfccb,#4ade80);
+      border-color:#d9f99d;
+      box-shadow:0 0 42px rgba(74,222,128,.85),0 22px 45px rgba(0,0,0,.34);
+    }
+    .answer-card.wrong{
+      background:linear-gradient(145deg,#fee2e2,#fb7185);
+      border-color:#fecaca;
+      box-shadow:0 0 38px rgba(239,68,68,.72),0 22px 45px rgba(0,0,0,.34);
+    }
+
+    .pos-1{left:3.5vw;top:22%}
+    .pos-2{left:3.5vw;top:43.5%}
+    .pos-3{left:3.5vw;top:65%}
+    .pos-4{right:3.5vw;top:31%}
+    .pos-5{right:3.5vw;top:59%}
+
+    .palm-cursor{
+      --p:0;
+      position:absolute;
+      z-index:30;
+      width:114px;
+      height:114px;
+      margin-left:-57px;
+      margin-top:-57px;
+      display:none;
+      border-radius:50%;
+      pointer-events:none;
+      background:conic-gradient(#facc15 calc(var(--p) * 1turn),rgba(255,255,255,.22) 0);
+      box-shadow:0 0 0 7px rgba(250,204,21,.18),0 0 0 17px rgba(5,46,22,.24),0 0 42px rgba(250,204,21,.88);
+    }
+    .palm-cursor::before{
+      content:"";
+      position:absolute;
+      inset:17px;
+      border-radius:50%;
+      background:rgba(250,204,21,.96);
+      border:5px solid rgba(255,255,255,.95);
+      box-shadow:inset 0 0 0 5px rgba(20,83,45,.23);
+    }
+    .palm-cursor::after{
+      content:"🖐️";
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:52px;
+      line-height:1;
+      transform:translateY(-2px);
+      filter:drop-shadow(0 4px 5px rgba(0,0,0,.35));
+    }
+
+    .feedback{
+      position:absolute;
+      left:50%;
+      bottom:max(22px,env(safe-area-inset-bottom));
+      transform:translateX(-50%);
+      z-index:25;
+      min-width:min(470px,78vw);
+      max-width:82vw;
+      padding:14px 22px;
+      border-radius:24px;
+      text-align:center;
+      font-size:clamp(22px,3vw,38px);
+      font-weight:1000;
+      color:white;
+      background:rgba(5,46,22,.88);
+      border:2px solid rgba(255,255,255,.38);
+      box-shadow:0 14px 38px rgba(0,0,0,.35);
+      white-space:pre-line;
+      backdrop-filter:blur(8px);
+    }
+    .feedback.good{background:rgba(21,128,61,.92)}
+    .feedback.bad{background:rgba(185,28,28,.92)}
+
+    .result-score{
+      margin:14px 0 4px;
+      font-size:clamp(58px,10vw,108px);
+      line-height:1;
+      font-weight:1000;
+      color:#d9f99d;
+      text-shadow:0 6px 24px rgba(0,0,0,.36);
+    }
+    .result-percent{
+      font-size:clamp(22px,3vw,34px);
+      font-weight:900;
+      color:#f7fee7;
+    }
+    .cycle-note{
+      margin:14px auto 18px;
+      padding:11px 14px;
+      border-radius:18px;
+      background:rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.18);
+      color:#dcfce7;
+      font-weight:800;
+      line-height:1.45;
+    }
+
+    .orientation-tip{
+      position:fixed;
+      inset:0;
+      z-index:100;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:26px;
+      text-align:center;
+      background:rgba(3,22,12,.96);
+    }
+    .orientation-tip>div{
+      max-width:520px;
+      padding:28px;
+      border-radius:28px;
+      background:rgba(20,83,45,.88);
+      border:2px solid rgba(190,242,100,.55);
+      font-size:22px;
+      font-weight:900;
+      line-height:1.5;
+    }
+
+    @media (orientation:portrait) and (max-width:900px){
+      .orientation-tip{display:flex}
+    }
+
+    @media (max-height:650px){
+      .question-panel{min-height:96px;padding:10px 20px 12px}
+      .animal-name{font-size:clamp(29px,4.4vw,52px)}
+      .answer-card{min-height:82px;font-size:clamp(21px,2.7vw,34px)}
+      .pos-1{top:21%}.pos-2{top:43%}.pos-3{top:65%}.pos-4{top:30%}.pos-5{top:59%}
+      .palm-cursor{width:96px;height:96px;margin-left:-48px;margin-top:-48px}
+      .palm-cursor::after{font-size:43px}
+      .palm-cursor::before{inset:15px}
+    }
+
+    @media (max-width:950px){
+      .question-panel{width:64vw}
+      .answer-card{width:31vw;padding:12px;font-size:clamp(19px,3vw,32px)}
+      .chip{min-width:105px;font-size:16px;padding:8px 11px}
+    }
+  </style>
+</head>
+<body>
+  <!--
+    สำคัญ: ใส่ลิงก์ Apps Script Web App ที่ลงท้าย /exec
+    ตรงตัวแปร GAS_URL ในส่วน JavaScript ด้านล่าง
+  -->
+
+  <video id="video" playsinline muted autoplay></video>
+  <div id="backdrop"></div>
+
+  <div id="app">
+    <section id="bootScreen" class="screen">
+      <div class="center-panel">
+        <div class="spinner"></div>
+        <h1 id="bootTitle" class="main-title">กำลังโหลด...</h1>
+        <p id="bootText" class="subtitle">กำลังโหลด CONFIG และสัตว์ 100 ชนิด</p>
+        <div id="bootError" class="error-box hidden"></div>
+      </div>
+    </section>
+
+    <section id="startScreen" class="screen hidden">
+      <div class="center-panel">
+        <div class="leaf-logo">🐾</div>
+        <h1 id="startTitle" class="main-title">เกม AR จัดกลุ่มสัตว์มีกระดูกสันหลัง</h1>
+        <p id="startSubtitle" class="subtitle">กางฝ่ามือแตะคำตอบให้ตรงกลุ่ม</p>
+        <div id="topicText" class="topic-box">ปลา\nสะเทินน้ำสะเทินบก\nเลื้อยคลาน\nนก\nสัตว์เลี้ยงลูกด้วยน้ำนม</div>
+        <input id="playerName" class="name-input hidden" maxlength="80" autocomplete="off" placeholder="ชื่อผู้เล่น / ห้องเรียน (ไม่ใส่ก็ได้)">
+        <button id="startBtn" class="main-btn" type="button">เริ่มเกม</button>
+        <p id="startNote" class="note">แนะนำให้เปิดแนวนอน\nกางฝ่ามือไปแตะคำตอบ แล้วแช่ไว้ประมาณ 1 วินาที</p>
+        <div id="startError" class="error-box hidden"></div>
+      </div>
+    </section>
+
+    <section id="cameraLoadingScreen" class="screen hidden">
+      <div class="center-panel">
+        <div class="spinner"></div>
+        <h1 id="loadingTitle" class="main-title">กำลังเปิดกล้อง...</h1>
+        <p id="loadingSubtitle" class="subtitle">เตรียมระบบจับฝ่ามือ</p>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen hidden">
+      <div class="hud-left">
+        <div id="scoreChip" class="chip">คะแนน 0</div>
+        <div id="roundChip" class="chip">ข้อ 1/10</div>
+      </div>
+
+      <div class="hud-right">
+        <div id="timerChip" class="chip">เวลา 12</div>
+        <button id="soundBtn" class="sound-btn" type="button" aria-label="เปิดหรือปิดเสียง">🔊</button>
+      </div>
+
+      <div class="question-panel">
+        <div id="animalName" class="animal-name">ปลากัด</div>
+        <div id="questionHint" class="question-hint">จัดอยู่ในกลุ่มใด</div>
+        <div class="timer-track"><div id="timerFill" class="timer-fill"></div></div>
+      </div>
+
+      <div id="answers">
+        <div class="answer-card pos-1" data-index="0">ปลา</div>
+        <div class="answer-card pos-2" data-index="1">สัตว์สะเทินน้ำสะเทินบก</div>
+        <div class="answer-card pos-3" data-index="2">สัตว์เลื้อยคลาน</div>
+        <div class="answer-card pos-4" data-index="3">นก</div>
+        <div class="answer-card pos-5" data-index="4">สัตว์เลี้ยงลูกด้วยน้ำนม</div>
+      </div>
+
+      <div id="cursor0" class="palm-cursor"></div>
+      <div id="cursor1" class="palm-cursor"></div>
+      <div id="feedback" class="feedback hidden"></div>
+    </section>
+
+    <section id="resultScreen" class="screen hidden">
+      <div class="center-panel">
+        <div class="leaf-logo">🏆</div>
+        <h1 id="finishTitle" class="main-title">จบเกม</h1>
+        <div id="resultScore" class="result-score">0/10</div>
+        <div id="resultPercent" class="result-percent">0%</div>
+        <div id="cycleNote" class="cycle-note">ใช้คำถามแล้ว 10 จาก 100 ชนิด</div>
+        <button id="playAgainBtn" class="main-btn" type="button">เล่นอีกครั้ง</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="orientation-tip">
+    <div>📱 หมุนอุปกรณ์เป็นแนวนอน<br>เพื่อให้เห็นคำตอบทั้ง 5 กลุ่มและเล่นเกม AR ได้สะดวก</div>
+  </div>
+
+  <script>
+    'use strict';
+
+    /* =========================================================
+     * ใส่ลิงก์ Apps Script Web App ที่ลงท้าย /exec ตรงนี้
+     * ========================================================= */
+    const GAS_URL = 'PUT_YOUR_GAS_WEB_APP_EXEC_URL_HERE';
+    const DEFAULT_SET = 'vertebrate5_100';
+
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+
+    const el = {
+      video: $('#video'),
+      bootScreen: $('#bootScreen'),
+      startScreen: $('#startScreen'),
+      cameraLoadingScreen: $('#cameraLoadingScreen'),
+      gameScreen: $('#gameScreen'),
+      resultScreen: $('#resultScreen'),
+      bootTitle: $('#bootTitle'),
+      bootText: $('#bootText'),
+      bootError: $('#bootError'),
+      startTitle: $('#startTitle'),
+      startSubtitle: $('#startSubtitle'),
+      topicText: $('#topicText'),
+      playerName: $('#playerName'),
+      startBtn: $('#startBtn'),
+      startNote: $('#startNote'),
+      startError: $('#startError'),
+      loadingTitle: $('#loadingTitle'),
+      loadingSubtitle: $('#loadingSubtitle'),
+      scoreChip: $('#scoreChip'),
+      roundChip: $('#roundChip'),
+      timerChip: $('#timerChip'),
+      timerFill: $('#timerFill'),
+      soundBtn: $('#soundBtn'),
+      animalName: $('#animalName'),
+      questionHint: $('#questionHint'),
+      answerCards: $$('.answer-card'),
+      cursors: [$('#cursor0'), $('#cursor1')],
+      feedback: $('#feedback'),
+      finishTitle: $('#finishTitle'),
+      resultScore: $('#resultScore'),
+      resultPercent: $('#resultPercent'),
+      cycleNote: $('#cycleNote'),
+      playAgainBtn: $('#playAgainBtn')
+    };
+
+    let config = {};
+    let questionBank = [];
+    let roundQuestions = [];
+    let currentIndex = 0;
+    let score = 0;
+    let answers = [];
+    let roundStartedAt = 0;
+    let currentRoundNo = 1;
+    let usedCountAfterSelection = 0;
+    let completedAll100ThisRound = false;
+
+    let hands = null;
+    let cameraStream = null;
+    let cameraLoopStarted = false;
+    let frameBusy = false;
+    let playing = false;
+    let answerLocked = false;
+    let questionDeadline = 0;
+    let timerLoop = null;
+    let currentHoverKey = '';
+    let holdStart = 0;
+    let lastTickSecond = -1;
+
+    let muted = false;
+    let audio = null;
+
+    function cfg(key, fallback = '') {
+      const value = config[key];
+      return value === undefined || value === null || String(value) === ''
+        ? fallback
+        : String(value);
+    }
+
+    function boolCfg(key, fallback = false) {
+      const raw = cfg(key, fallback ? 'TRUE' : 'FALSE').trim().toLowerCase();
+      if (['true','1','yes','y','on','ใช่'].includes(raw)) return true;
+      if (['false','0','no','n','off','ไม่'].includes(raw)) return false;
+      return fallback;
+    }
+
+    function numCfg(key, fallback) {
+      const value = Number(cfg(key, String(fallback)));
+      return Number.isFinite(value) ? value : fallback;
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function shuffle(items) {
+      const a = items.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function showOnly(screenName) {
+      const map = {
+        boot: el.bootScreen,
+        start: el.startScreen,
+        loading: el.cameraLoadingScreen,
+        game: el.gameScreen,
+        result: el.resultScreen
+      };
+      Object.values(map).forEach(node => node.classList.add('hidden'));
+      map[screenName].classList.remove('hidden');
+    }
+
+    function isGasUrlReady() {
+      return /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec(?:\?.*)?$/i.test(GAS_URL.trim());
+    }
+
+    function jsonp(url, params = {}, timeoutMs = 20000) {
+      return new Promise((resolve, reject) => {
+        const callbackName = '__arQuizCallback_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+        const script = document.createElement('script');
+        const timer = setTimeout(() => cleanup(new Error('หมดเวลารอข้อมูลจาก Apps Script')), timeoutMs);
+
+        function cleanup(error, data) {
+          clearTimeout(timer);
+          try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+          script.remove();
+          if (error) reject(error); else resolve(data);
+        }
+
+        window[callbackName] = data => cleanup(null, data);
+        script.onerror = () => cleanup(new Error('เชื่อมต่อ Apps Script ไม่สำเร็จ'));
+
+        const query = new URLSearchParams({ ...params, callback: callbackName, _: Date.now() });
+        script.src = url + (url.includes('?') ? '&' : '?') + query.toString();
+        document.head.appendChild(script);
+      });
+    }
+
+    async function loadGameData() {
+      showOnly('boot');
+      el.bootError.classList.add('hidden');
+
+      if (!isGasUrlReady()) {
+        throw new Error('ยังไม่ได้ใส่ GAS_URL\nเปิดไฟล์ index แล้วนำลิงก์ Apps Script ที่ลงท้าย /exec ไปแทน PUT_YOUR_GAS_WEB_APP_EXEC_URL_HERE');
+      }
+
+      const data = await jsonp(GAS_URL, {
+        action: 'getGameData',
+        set: DEFAULT_SET
+      });
+
+      if (!data || data.success !== true) {
+        throw new Error(data && data.message ? data.message : 'โหลดข้อมูลเกมไม่สำเร็จ');
+      }
+
+      config = normalizeConfig(data.config || {});
+      questionBank = Array.isArray(data.questions) ? data.questions.filter(isValidQuestion) : [];
+
+      if (questionBank.length < 5) {
+        throw new Error('ไม่พบคำถามในชีต QUESTIONS หรือจำนวนคำถามน้อยเกินไป');
+      }
+
+      applyConfigToUI();
+      showOnly('start');
+    }
+
+    function normalizeConfig(raw) {
+      const result = {};
+      Object.keys(raw || {}).forEach(key => {
+        result[key] = String(raw[key] ?? '').trim();
+      });
+      return result;
+    }
+
+    function isValidQuestion(q) {
+      return q && String(q.animal || '').trim() && String(q.correct || '').trim();
+    }
+
+    function getOptionTexts() {
+      return [
+        cfg('OPTION_1_TEXT', 'ปลา'),
+        cfg('OPTION_2_TEXT', 'สัตว์สะเทินน้ำสะเทินบก'),
+        cfg('OPTION_3_TEXT', 'สัตว์เลื้อยคลาน'),
+        cfg('OPTION_4_TEXT', 'นก'),
+        cfg('OPTION_5_TEXT', 'สัตว์เลี้ยงลูกด้วยน้ำนม')
+      ];
+    }
+
+    function applyConfigToUI() {
+      document.title = cfg('APP_TITLE', 'เกม AR จัดกลุ่มสัตว์มีกระดูกสันหลัง');
+      el.startTitle.textContent = cfg('APP_TITLE', 'เกม AR จัดกลุ่มสัตว์มีกระดูกสันหลัง');
+      el.startSubtitle.textContent = cfg('APP_SUBTITLE', 'กางฝ่ามือแตะคำตอบให้ตรงกลุ่ม');
+      el.topicText.textContent = cfg('GAME_TOPIC_TEXT', 'ปลา\nสะเทินน้ำสะเทินบก\nเลื้อยคลาน\nนก\nสัตว์เลี้ยงลูกด้วยน้ำนม');
+      el.startBtn.textContent = cfg('START_BUTTON_TEXT', 'เริ่มเกม');
+      el.startNote.textContent = cfg('START_NOTE_TEXT', 'แนะนำให้เปิดแนวนอน\nกางฝ่ามือไปแตะคำตอบ แล้วแช่ไว้ประมาณ 1 วินาที');
+      el.loadingTitle.textContent = cfg('LOADING_CAMERA_TEXT', 'กำลังเปิดกล้อง...');
+      el.loadingSubtitle.textContent = cfg('LOADING_SUBTITLE_TEXT', 'เตรียมกล้อง สัตว์ 100 ชนิด และระบบจับฝ่ามือ');
+      el.finishTitle.textContent = cfg('FINISH_TEXT', 'จบเกม');
+      el.playAgainBtn.textContent = cfg('PLAY_AGAIN_BUTTON_TEXT', 'เล่นอีกครั้ง');
+      el.playerName.placeholder = cfg('PLAYER_NAME_PLACEHOLDER', 'ชื่อผู้เล่น / ห้องเรียน (ไม่ใส่ก็ได้)');
+      el.playerName.classList.toggle('hidden', !boolCfg('SHOW_PLAYER_NAME_INPUT', false));
+
+      getOptionTexts().forEach((text, index) => {
+        el.answerCards[index].textContent = text;
+        el.answerCards[index].dataset.key = text;
+      });
+    }
+
+    function storageKey() {
+      return 'arVertebrateQuiz:' + DEFAULT_SET + ':usedQuestionIds';
+    }
+
+    function getUsedIds() {
+      if (!boolCfg('NO_REPEAT_UNTIL_COMPLETE', true)) return [];
+      try {
+        const value = JSON.parse(localStorage.getItem(storageKey()) || '[]');
+        return Array.isArray(value) ? value.map(String) : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function setUsedIds(ids) {
+      if (!boolCfg('NO_REPEAT_UNTIL_COMPLETE', true)) return;
+      try { localStorage.setItem(storageKey(), JSON.stringify(ids.map(String))); } catch (_) {}
+    }
+
+    function prepareRoundQuestions() {
+      const total = clamp(Math.trunc(numCfg('TOTAL_QUESTIONS', 10)), 1, questionBank.length);
+      const noRepeat = boolCfg('NO_REPEAT_UNTIL_COMPLETE', true);
+      let usedIds = noRepeat ? getUsedIds() : [];
+      const allIds = new Set(questionBank.map(q => String(q.id)));
+      usedIds = usedIds.filter(id => allIds.has(id));
+
+      let available = questionBank.filter(q => !usedIds.includes(String(q.id)));
+
+      if (available.length < total && boolCfg('RESET_AFTER_ALL_QUESTIONS', true)) {
+        usedIds = [];
+        available = questionBank.slice();
+        setUsedIds([]);
+      }
+
+      if (available.length < total) {
+        available = questionBank.slice();
+      }
+
+      roundQuestions = boolCfg('RANDOM_QUESTIONS', true)
+        ? shuffle(available).slice(0, total)
+        : available.slice(0, total);
+
+      const beforeCount = usedIds.length;
+      currentRoundNo = Math.floor(beforeCount / total) + 1;
+
+      if (noRepeat) {
+        const nextUsed = Array.from(new Set(usedIds.concat(roundQuestions.map(q => String(q.id)))));
+        usedCountAfterSelection = nextUsed.length;
+        completedAll100ThisRound = nextUsed.length >= questionBank.length;
+        setUsedIds(nextUsed);
+      } else {
+        usedCountAfterSelection = Math.min(total, questionBank.length);
+        completedAll100ThisRound = false;
+      }
+    }
+
+    async function startGame() {
+      el.startError.classList.add('hidden');
+      showOnly('loading');
+
+      audio = audio || new GameAudio();
+      audio.setMuted(muted);
+      await audio.unlock();
+
+      try {
+        await setupCameraAndHands();
+      } catch (error) {
+        console.error(error);
+        el.startError.textContent = error && error.message
+          ? error.message
+          : cfg('CAMERA_ERROR_TEXT', 'เปิดกล้องไม่ได้ กรุณาอนุญาตการใช้กล้อง');
+        el.startError.classList.remove('hidden');
+        showOnly('start');
+        return;
+      }
+
+      prepareRoundQuestions();
+      currentIndex = 0;
+      score = 0;
+      answers = [];
+      playing = true;
+      answerLocked = false;
+      currentHoverKey = '';
+      holdStart = 0;
+      roundStartedAt = Date.now();
+      lastTickSecond = -1;
+
+      showOnly('game');
+      audio.startBgm();
+      showQuestion();
+    }
+
+    async function setupCameraAndHands() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('เบราว์เซอร์นี้ไม่รองรับการเปิดกล้อง');
+      }
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        throw new Error('ต้องเปิดเกมผ่าน HTTPS เช่น GitHub Pages');
+      }
+
+      if (!hands) {
+        hands = new Hands({
+          locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+        hands.setOptions({
+          maxNumHands: 2,
+          modelComplexity: 1,
+          minDetectionConfidence: 0.65,
+          minTrackingConfidence: 0.65
+        });
+        hands.onResults(onHandsResults);
+      }
+
+      const oldStream = el.video.srcObject;
+      const hasLiveStream = oldStream && oldStream.getVideoTracks &&
+        oldStream.getVideoTracks().some(track => track.readyState === 'live');
+
+      if (!hasLiveStream) {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: 'user',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+        el.video.srcObject = cameraStream;
+        await el.video.play();
+      }
+
+      if (!cameraLoopStarted) {
+        cameraLoopStarted = true;
+        requestAnimationFrame(processCameraFrame);
+      }
+    }
+
+    async function processCameraFrame() {
+      if (hands && el.video.readyState >= 2 && !frameBusy) {
+        frameBusy = true;
+        try {
+          await hands.send({ image: el.video });
+        } catch (error) {
+          console.warn('MediaPipe frame error:', error);
+        } finally {
+          frameBusy = false;
+        }
+      }
+      requestAnimationFrame(processCameraFrame);
+    }
+
+    function showQuestion() {
+      clearAnswerStyles();
+      hideFeedback();
+      hideCursors();
+      answerLocked = false;
+      currentHoverKey = '';
+      holdStart = 0;
+      lastTickSecond = -1;
+
+      const q = roundQuestions[currentIndex];
+      el.animalName.textContent = q.animal || q.question || '';
+      el.questionHint.textContent = 'จัดอยู่ในกลุ่มใด';
+      el.scoreChip.textContent = `คะแนน ${score}`;
+      el.roundChip.textContent = `ข้อ ${currentIndex + 1}/${roundQuestions.length}`;
+
+      const seconds = Math.max(1, numCfg('QUESTION_TIME_SEC', 12));
+      questionDeadline = Date.now() + seconds * 1000;
+      el.timerFill.style.width = '100%';
+
+      if (timerLoop) clearInterval(timerLoop);
+      timerLoop = setInterval(updateTimer, 100);
+      updateTimer();
+    }
+
+    function updateTimer() {
+      if (!playing || answerLocked) return;
+
+      const totalMs = Math.max(1000, numCfg('QUESTION_TIME_SEC', 12) * 1000);
+      const remainMs = Math.max(0, questionDeadline - Date.now());
+      const remainSeconds = Math.ceil(remainMs / 1000);
+      const ratio = clamp(remainMs / totalMs, 0, 1);
+
+      el.timerChip.textContent = `เวลา ${remainSeconds}`;
+      el.timerFill.style.width = `${ratio * 100}%`;
+
+      if (remainSeconds <= 3 && remainSeconds > 0 && remainSeconds !== lastTickSecond) {
+        lastTickSecond = remainSeconds;
+        audio && audio.play('tick');
+      }
+
+      if (remainMs <= 0) {
+        clearInterval(timerLoop);
+        chooseAnswer('__TIMEOUT__');
+      }
+    }
+
+    function onHandsResults(results) {
+      if (!playing || answerLocked || el.gameScreen.classList.contains('hidden')) {
+        hideCursors();
+        return;
+      }
+
+      const handsList = Array.isArray(results.multiHandLandmarks)
+        ? results.multiHandLandmarks.slice(0, 2)
+        : [];
+
+      if (!handsList.length) {
+        resetHover();
+        hideCursors();
+        return;
+      }
+
+      const palmPoints = handsList.map(getPalmScreenPoint).filter(Boolean);
+      renderPalmCursors(palmPoints);
+
+      const touched = findTouchedOption(palmPoints);
+      if (!touched) {
+        resetHover();
+        updateCursorProgress(0);
+        return;
+      }
+
+      el.answerCards.forEach(card => {
+        card.classList.toggle('hover', card.dataset.key === touched.key);
+      });
+
+      if (currentHoverKey !== touched.key) {
+        currentHoverKey = touched.key;
+        holdStart = Date.now();
+        audio && audio.play('hover');
+      }
+
+      const holdMs = Math.max(200, numCfg('HOLD_MS', 800));
+      const progress = clamp((Date.now() - holdStart) / holdMs, 0, 1);
+      updateCursorProgress(progress);
+
+      if (progress >= 1) {
+        chooseAnswer(touched.key);
+      }
+    }
+
+    function getPalmScreenPoint(landmarks) {
+      if (!landmarks || !landmarks.length) return null;
+      const indexes = [0, 5, 9, 13, 17];
+      let x = 0;
+      let y = 0;
+      let count = 0;
+      indexes.forEach(index => {
+        const point = landmarks[index];
+        if (!point) return;
+        x += point.x;
+        y += point.y;
+        count += 1;
+      });
+      if (!count) return null;
+      return {
+        x: (1 - x / count) * window.innerWidth,
+        y: (y / count) * window.innerHeight
+      };
+    }
+
+    function renderPalmCursors(points) {
+      el.cursors.forEach((cursor, index) => {
+        const point = points[index];
+        if (!point) {
+          cursor.style.display = 'none';
+          return;
+        }
+        cursor.style.display = 'block';
+        cursor.style.left = `${point.x}px`;
+        cursor.style.top = `${point.y}px`;
+      });
+    }
+
+    function hideCursors() {
+      el.cursors.forEach(cursor => {
+        cursor.style.display = 'none';
+        cursor.style.setProperty('--p', '0');
+      });
+    }
+
+    function updateCursorProgress(progress) {
+      el.cursors.forEach(cursor => {
+        if (cursor.style.display !== 'none') {
+          cursor.style.setProperty('--p', String(progress));
+        }
+      });
+    }
+
+    function findTouchedOption(points) {
+      const padding = Math.max(0, numCfg('HIT_PADDING', 105));
+      for (const point of points) {
+        for (const card of el.answerCards) {
+          const rect = card.getBoundingClientRect();
+          if (
+            point.x >= rect.left - padding &&
+            point.x <= rect.right + padding &&
+            point.y >= rect.top - padding &&
+            point.y <= rect.bottom + padding
+          ) {
+            return { key: card.dataset.key, card, point };
+          }
+        }
+      }
+      return null;
+    }
+
+    function resetHover() {
+      currentHoverKey = '';
+      holdStart = 0;
+      el.answerCards.forEach(card => card.classList.remove('hover'));
+    }
+
+    function clearAnswerStyles() {
+      el.answerCards.forEach(card => card.classList.remove('hover','correct','wrong'));
+    }
+
+    function hideFeedback() {
+      el.feedback.className = 'feedback hidden';
+      el.feedback.textContent = '';
+    }
+
+    function showFeedback(text, type) {
+      el.feedback.textContent = text;
+      el.feedback.className = `feedback ${type || ''}`.trim();
+    }
+
+    function chooseAnswer(selectedKey) {
+      if (!playing || answerLocked) return;
+      answerLocked = true;
+      resetHover();
+      updateCursorProgress(1);
+      clearInterval(timerLoop);
+
+      const q = roundQuestions[currentIndex];
+      const correctKey = String(q.correct || '').trim();
+      const isTimeout = selectedKey === '__TIMEOUT__';
+      const isCorrect = !isTimeout && selectedKey === correctKey;
+
+      const correctCard = el.answerCards.find(card => card.dataset.key === correctKey);
+      const selectedCard = el.answerCards.find(card => card.dataset.key === selectedKey);
+      if (correctCard) correctCard.classList.add('correct');
+      if (selectedCard && !isCorrect) selectedCard.classList.add('wrong');
+
+      if (isCorrect) {
+        score += 1;
+        el.scoreChip.textContent = `คะแนน ${score}`;
+        showFeedback(cfg('CORRECT_TEXT', 'ถูกต้อง!'), 'good');
+        audio && audio.play('correct');
+      } else if (isTimeout) {
+        showFeedback(`${cfg('TIMEOUT_TEXT', 'หมดเวลา!')}\nคำตอบ: ${correctKey}`, 'bad');
+        audio && audio.play('wrong');
+      } else {
+        showFeedback(`${cfg('WRONG_TEXT', 'ยังไม่ถูก')}\nคำตอบ: ${correctKey}`, 'bad');
+        audio && audio.play('wrong');
+      }
+
+      answers.push({
+        id: q.id,
+        animal: q.animal,
+        selected: isTimeout ? '' : selectedKey,
+        correct: correctKey,
+        isCorrect,
+        timeout: isTimeout
+      });
+
+      const explanationDelay = boolCfg('SHOW_EXPLANATION', false) ? 1800 : 1250;
+      setTimeout(() => {
+        if (currentIndex + 1 < roundQuestions.length) {
+          currentIndex += 1;
+          showQuestion();
+        } else {
+          finishGame();
+        }
+      }, explanationDelay);
+    }
+
+    function finishGame() {
+      playing = false;
+      answerLocked = true;
+      clearInterval(timerLoop);
+      hideCursors();
+      audio && audio.stopBgm();
+
+      const total = roundQuestions.length;
+      const percent = total ? Math.round((score / total) * 100) : 0;
+      const durationSec = Math.max(0, Math.round((Date.now() - roundStartedAt) / 1000));
+
+      el.resultScore.textContent = `${score}/${total}`;
+      el.resultPercent.textContent = `${percent}%`;
+
+      if (completedAll100ThisRound) {
+        el.cycleNote.textContent = cfg(
+          'COMPLETED_100_TEXT',
+          'เล่นครบสัตว์ทั้ง 100 ชนิดแล้ว รอบถัดไปจะเริ่มสุ่มชุดใหม่'
+        );
+      } else {
+        el.cycleNote.textContent = `ใช้คำถามแล้ว ${usedCountAfterSelection} จาก ${questionBank.length} ชนิด • รอบที่ ${currentRoundNo}`;
+      }
+
+      showOnly('result');
+      saveScore({ total, percent, durationSec }).catch(error => {
+        console.warn('บันทึกคะแนนไม่สำเร็จ:', error);
+      });
+    }
+
+    async function saveScore({ total, durationSec }) {
+      if (!isGasUrlReady()) return;
+      await jsonp(GAS_URL, {
+        action: 'saveScore',
+        playerName: el.playerName.value.trim(),
+        set: cfg('GAME_SET', DEFAULT_SET),
+        score: String(score),
+        total: String(total),
+        durationSec: String(durationSec),
+        roundNo: String(currentRoundNo),
+        usedQuestionCount: String(usedCountAfterSelection),
+        completedAll100: completedAll100ThisRound ? 'TRUE' : 'FALSE',
+        device: navigator.userAgent.slice(0, 200),
+        note: completedAll100ThisRound ? 'Completed question cycle' : ''
+      }, 15000);
+    }
+
+    function playAgain() {
+      startGame();
+    }
+
+    class GameAudio {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+        this.bgmTimer = null;
+        this.bgmStep = 0;
+      }
+
+      async unlock() {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        if (!this.ctx) this.ctx = new AudioContextClass();
+        if (this.ctx.state === 'suspended') await this.ctx.resume();
+      }
+
+      setMuted(value) {
+        this.muted = Boolean(value);
+        if (this.muted) this.stopBgm();
+      }
+
+      tone(frequency, duration, type = 'sine', volume = 0.08, delay = 0) {
+        if (this.muted || !this.ctx || !boolCfg('SFX_ENABLED', true)) return;
+        const start = this.ctx.currentTime + delay;
+        const oscillator = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(frequency, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume * numCfg('SOUND_VOLUME', .65)), start + .015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        oscillator.connect(gain).connect(this.ctx.destination);
+        oscillator.start(start);
+        oscillator.stop(start + duration + .03);
+      }
+
+      play(name) {
+        if (name === 'hover') {
+          this.tone(560, .07, 'sine', .045);
+        } else if (name === 'tick') {
+          this.tone(720, .08, 'square', .05);
+        } else if (name === 'correct') {
+          this.tone(523.25, .14, 'sine', .11);
+          this.tone(659.25, .16, 'sine', .10, .10);
+          this.tone(783.99, .22, 'sine', .10, .20);
+        } else if (name === 'wrong') {
+          this.tone(240, .18, 'sawtooth', .08);
+          this.tone(180, .28, 'sawtooth', .08, .12);
+        }
+      }
+
+      startBgm() {
+        if (this.muted || !this.ctx || !boolCfg('BGM_ENABLED', true) || this.bgmTimer) return;
+        const notes = [261.63,329.63,392.00,329.63,293.66,349.23,440.00,349.23];
+        const playStep = () => {
+          if (this.muted || !playing) return;
+          const note = notes[this.bgmStep % notes.length];
+          this.tone(note, .22, 'triangle', .018);
+          this.bgmStep += 1;
+        };
+        playStep();
+        this.bgmTimer = setInterval(playStep, 470);
+      }
+
+      stopBgm() {
+        if (this.bgmTimer) clearInterval(this.bgmTimer);
+        this.bgmTimer = null;
+      }
+    }
+
+    el.startBtn.addEventListener('click', startGame);
+    el.playAgainBtn.addEventListener('click', playAgain);
+    el.soundBtn.addEventListener('click', async () => {
+      muted = !muted;
+      el.soundBtn.textContent = muted ? '🔇' : '🔊';
+      audio = audio || new GameAudio();
+      await audio.unlock();
+      audio.setMuted(muted);
+      if (!muted && playing) audio.startBgm();
+    });
+
+    window.addEventListener('beforeunload', () => {
+      if (cameraStream && cameraStream.getTracks) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    });
+
+    loadGameData().catch(error => {
+      console.error(error);
+      el.bootTitle.textContent = 'เปิดเกมไม่ได้';
+      el.bootText.textContent = '';
+      el.bootError.textContent = error && error.message ? error.message : String(error);
+      el.bootError.classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>
