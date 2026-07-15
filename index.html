@@ -290,6 +290,8 @@
       transition:width .1s linear;
     }
 
+    #handCanvas{position:absolute;inset:0;width:100%;height:100%;z-index:7;pointer-events:none}
+
     #answers{position:absolute;inset:0;z-index:8}
 
     .answer-card{
@@ -332,10 +334,10 @@
     }
 
     .pos-1{left:3.5vw;top:22%}
-    .pos-2{left:3.5vw;top:43.5%}
-    .pos-3{left:3.5vw;top:65%}
-    .pos-4{right:3.5vw;top:31%}
-    .pos-5{right:3.5vw;top:59%}
+    .pos-2{left:3.5vw;bottom:8.5%}
+    .pos-3{left:50%;bottom:8.5%;translate:-50% 0}
+    .pos-4{right:3.5vw;top:22%}
+    .pos-5{right:3.5vw;bottom:8.5%}
 
     .palm-cursor{
       --p:0;
@@ -450,7 +452,7 @@
       .question-panel{min-height:96px;padding:10px 20px 12px}
       .animal-name{font-size:clamp(29px,4.4vw,52px)}
       .answer-card{min-height:82px;font-size:clamp(21px,2.7vw,34px)}
-      .pos-1{top:21%}.pos-2{top:43%}.pos-3{top:65%}.pos-4{top:30%}.pos-5{top:59%}
+      .pos-1{top:21%}.pos-2{bottom:7%}.pos-3{left:50%;bottom:7%;translate:-50% 0}.pos-4{top:21%}.pos-5{bottom:7%}
       .palm-cursor{width:96px;height:96px;margin-left:-48px;margin-top:-48px}
       .palm-cursor::after{font-size:43px}
       .palm-cursor::before{inset:15px}
@@ -520,6 +522,8 @@
         <div class="timer-track"><div id="timerFill" class="timer-fill"></div></div>
       </div>
 
+      <canvas id="handCanvas" aria-hidden="true"></canvas>
+
       <div id="answers">
         <div class="answer-card pos-1" data-index="0">ปลา</div>
         <div class="answer-card pos-2" data-index="1">สัตว์สะเทินน้ำสะเทินบก</div>
@@ -587,6 +591,7 @@
       soundBtn: $('#soundBtn'),
       animalName: $('#animalName'),
       questionHint: $('#questionHint'),
+      handCanvas: $('#handCanvas'),
       answerCards: $$('.answer-card'),
       cursors: [$('#cursor0'), $('#cursor1')],
       feedback: $('#feedback'),
@@ -959,8 +964,89 @@
       }
     }
 
+
+    const HAND_CONNECTIONS = [
+      [0,1],[1,2],[2,3],[3,4],
+      [0,5],[5,6],[6,7],[7,8],
+      [5,9],[9,10],[10,11],[11,12],
+      [9,13],[13,14],[14,15],[15,16],
+      [13,17],[17,18],[18,19],[19,20],
+      [0,17]
+    ];
+
+    function syncHandCanvasSize() {
+      if (!el.handCanvas) return;
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const width = Math.round(window.innerWidth * dpr);
+      const height = Math.round(window.innerHeight * dpr);
+      if (el.handCanvas.width !== width || el.handCanvas.height !== height) {
+        el.handCanvas.width = width;
+        el.handCanvas.height = height;
+      }
+      el.handCanvas.style.width = `${window.innerWidth}px`;
+      el.handCanvas.style.height = `${window.innerHeight}px`;
+    }
+
+    function clearHandCanvas() {
+      if (!el.handCanvas) return;
+      const ctx = el.handCanvas.getContext('2d');
+      if (!ctx) return;
+      ctx.clearRect(0, 0, el.handCanvas.width, el.handCanvas.height);
+    }
+
+    function drawHandGuides(handsList) {
+      if (!el.handCanvas) return;
+      syncHandCanvasSize();
+      const ctx = el.handCanvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.clearRect(0, 0, el.handCanvas.width, el.handCanvas.height);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      handsList.forEach(landmarks => drawOneHand(ctx, landmarks));
+    }
+
+    function drawOneHand(ctx, landmarks) {
+      if (!landmarks || !landmarks.length) return;
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const toCanvas = point => ({
+        x: (1 - point.x) * el.handCanvas.width,
+        y: point.y * el.handCanvas.height
+      });
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(250, 204, 21, 0.95)';
+      ctx.fillStyle = 'rgba(253, 224, 71, 0.95)';
+      ctx.shadowColor = 'rgba(250, 204, 21, 0.70)';
+      ctx.shadowBlur = 12 * dpr;
+      ctx.lineWidth = 4 * dpr;
+
+      HAND_CONNECTIONS.forEach(([a, b]) => {
+        const p1 = landmarks[a];
+        const p2 = landmarks[b];
+        if (!p1 || !p2) return;
+        const c1 = toCanvas(p1);
+        const c2 = toCanvas(p2);
+        ctx.beginPath();
+        ctx.moveTo(c1.x, c1.y);
+        ctx.lineTo(c2.x, c2.y);
+        ctx.stroke();
+      });
+
+      landmarks.forEach((point, index) => {
+        const c = toCanvas(point);
+        const r = (index === 0 ? 6.5 : 4.2) * dpr;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+
     function onHandsResults(results) {
       if (!playing || answerLocked || el.gameScreen.classList.contains('hidden')) {
+        clearHandCanvas();
         hideCursors();
         return;
       }
@@ -971,9 +1057,12 @@
 
       if (!handsList.length) {
         resetHover();
+        clearHandCanvas();
         hideCursors();
         return;
       }
+
+      drawHandGuides(handsList);
 
       const palmPoints = handsList.map(getPalmScreenPoint).filter(Boolean);
       renderPalmCursors(palmPoints);
@@ -1270,11 +1359,15 @@
       if (!muted && playing) audio.startBgm();
     });
 
+    window.addEventListener('resize', syncHandCanvasSize);
+
     window.addEventListener('beforeunload', () => {
       if (cameraStream && cameraStream.getTracks) {
         cameraStream.getTracks().forEach(track => track.stop());
       }
     });
+
+    syncHandCanvasSize();
 
     loadGameData().catch(error => {
       console.error(error);
