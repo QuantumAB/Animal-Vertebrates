@@ -1,9 +1,14 @@
 <!doctype html>
+<!-- BUILD: vertebrate-ar-20260715-fixed-gas -->
 <html lang="th">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
   <meta name="theme-color" content="#14532d">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="build-version" content="vertebrate-ar-20260715-fixed-gas">
   <title>เกม AR จัดกลุ่มสัตว์มีกระดูกสันหลัง</title>
 
   <!-- MediaPipe Hands -->
@@ -550,7 +555,7 @@
     /* =========================================================
      * ใส่ลิงก์ Apps Script Web App ที่ลงท้าย /exec ตรงนี้
      * ========================================================= */
-    const GAS_URL = 'PUT_YOUR_GAS_WEB_APP_EXEC_URL_HERE';
+    const GAS_URL = 'https://script.google.com/a/macros/anubanamnat.ac.th/s/AKfycbz830iAGNWRidGY2qSVq4pepa0puhbL5Z-gy0JXacK6DmYe8zMpeSArCstn9o7Z7zc-iw/exec';
     const DEFAULT_SET = 'vertebrate5_100';
 
     const $ = (selector) => document.querySelector(selector);
@@ -663,7 +668,7 @@
     }
 
     function isGasUrlReady() {
-      return /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec(?:\?.*)?$/i.test(GAS_URL.trim());
+      return /^https:\/\/script\.google\.com\/(?:a\/macros\/[^/]+\/|macros\/)s\/.+\/exec(?:\?.*)?$/i.test(GAS_URL.trim());
     }
 
     function jsonp(url, params = {}, timeoutMs = 20000) {
@@ -693,7 +698,7 @@
       el.bootError.classList.add('hidden');
 
       if (!isGasUrlReady()) {
-        throw new Error('ยังไม่ได้ใส่ GAS_URL\nเปิดไฟล์ index แล้วนำลิงก์ Apps Script ที่ลงท้าย /exec ไปแทน PUT_YOUR_GAS_WEB_APP_EXEC_URL_HERE');
+        throw new Error('GAS_URL ไม่ถูกต้อง กรุณาใช้ลิงก์ Apps Script Web App ที่ลงท้ายด้วย /exec');
       }
 
       const data = await jsonp(GAS_URL, {
