@@ -709,7 +709,7 @@
      * ใส่ลิงก์ Apps Script Web App ที่ลงท้าย /exec ตรงนี้
      * ========================================================= */
     const GAS_URL = 'https://script.google.com/a/macros/anubanamnat.ac.th/s/AKfycbz830iAGNWRidGY2qSVq4pepa0puhbL5Z-gy0JXacK6DmYe8zMpeSArCstn9o7Z7zc-iw/exec';
-    const DEFAULT_SET = 'vertebrate5_150';
+    const DEFAULT_SET = 'vertebrate';
 
     const $ = (selector) => document.querySelector(selector);
     const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -1072,33 +1072,119 @@
     }
 
     function prepareRoundQuestions() {
-      const total = clamp(Math.trunc(numCfg('TOTAL_QUESTIONS', 10)), 1, questionBank.length);
+      const categoryKeys = Array.from(new Set(
+        getOptionTexts().map(text => String(text || '').trim()).filter(Boolean)
+      ));
+
+      const requestedTotal = clamp(
+        Math.trunc(numCfg('TOTAL_QUESTIONS', 10)),
+        1,
+        questionBank.length
+      );
+
+      // หากตั้งจำนวนน้อยกว่า 5 ข้อ ให้เพิ่มเป็นอย่างน้อย 5 ข้อ
+      // เพื่อให้แต่ละรอบมีสัตว์ครบทั้ง 5 ประเภท
+      const total = categoryKeys.length && questionBank.length >= categoryKeys.length
+        ? Math.max(requestedTotal, categoryKeys.length)
+        : requestedTotal;
+
+      const randomQuestions = boolCfg('RANDOM_QUESTIONS', true);
       const noRepeat = boolCfg('NO_REPEAT_UNTIL_COMPLETE', true);
       let usedIds = noRepeat ? getUsedIds() : [];
       const allIds = new Set(questionBank.map(q => String(q.id)));
       usedIds = usedIds.filter(id => allIds.has(id));
 
+      // แบ่งจำนวนให้ใกล้เคียงกันที่สุด
+      // เช่น 10 ข้อ / 5 ประเภท = ประเภทละ 2 ข้อ
+      const basePerCategory = Math.floor(total / categoryKeys.length);
+      const remainder = total % categoryKeys.length;
+      const extraOrder = shuffle(categoryKeys);
+      const quotaByCategory = {};
+
+      categoryKeys.forEach(key => {
+        quotaByCategory[key] = basePerCategory;
+      });
+      extraOrder.slice(0, remainder).forEach(key => {
+        quotaByCategory[key] += 1;
+      });
+
+      function groupByCategory(pool) {
+        const groups = {};
+        categoryKeys.forEach(key => { groups[key] = []; });
+
+        pool.forEach(question => {
+          const key = String(question.correct || '').trim();
+          if (groups[key]) groups[key].push(question);
+        });
+        return groups;
+      }
+
+      function hasEnoughForEveryCategory(pool) {
+        const groups = groupByCategory(pool);
+        return categoryKeys.every(key =>
+          groups[key].length >= (quotaByCategory[key] || 0)
+        );
+      }
+
       let available = questionBank.filter(q => !usedIds.includes(String(q.id)));
 
-      if (available.length < total && boolCfg('RESET_AFTER_ALL_QUESTIONS', true)) {
+      // ถ้าคำถามที่ยังไม่เคยใช้ของประเภทใดประเภทหนึ่งไม่พอ
+      // ให้เริ่มวงรอบคำถามใหม่พร้อมกันทั้งหมด
+      if (
+        !hasEnoughForEveryCategory(available) &&
+        boolCfg('RESET_AFTER_ALL_QUESTIONS', true)
+      ) {
         usedIds = [];
         available = questionBank.slice();
         setUsedIds([]);
       }
 
-      if (available.length < total) {
-        available = questionBank.slice();
-      }
+      const availableGroups = groupByCategory(available);
+      const allGroups = groupByCategory(questionBank);
+      const selected = [];
+      const selectedIds = new Set();
 
-      roundQuestions = boolCfg('RANDOM_QUESTIONS', true)
-        ? shuffle(available).slice(0, total)
-        : available.slice(0, total);
+      categoryKeys.forEach(key => {
+        const needed = quotaByCategory[key] || 0;
+        const freshPool = randomQuestions
+          ? shuffle(availableGroups[key] || [])
+          : (availableGroups[key] || []).slice();
+
+        freshPool.slice(0, needed).forEach(question => {
+          selected.push(question);
+          selectedIds.add(String(question.id));
+        });
+
+        // สำรองกรณีข้อมูลแต่ละประเภทมีจำนวนไม่เท่ากัน
+        // เติมจากคลังเดิมเฉพาะเท่าที่จำเป็น เพื่อยังคงให้ครบทุกประเภท
+        const shortage = needed - selected.filter(q =>
+          String(q.correct || '').trim() === key
+        ).length;
+
+        if (shortage > 0) {
+          const backupPool = (randomQuestions
+            ? shuffle(allGroups[key] || [])
+            : (allGroups[key] || []).slice()
+          ).filter(question => !selectedIds.has(String(question.id)));
+
+          backupPool.slice(0, shortage).forEach(question => {
+            selected.push(question);
+            selectedIds.add(String(question.id));
+          });
+        }
+      });
+
+      // สับรวมทุกประเภทหลังเลือกครบแล้ว
+      // จึงไม่ออกเป็น ปลา 2 ข้อ แล้วตามด้วยประเภทอื่นเป็นชุด ๆ
+      roundQuestions = shuffle(selected).slice(0, total);
 
       const beforeCount = usedIds.length;
       currentRoundNo = Math.floor(beforeCount / total) + 1;
 
       if (noRepeat) {
-        const nextUsed = Array.from(new Set(usedIds.concat(roundQuestions.map(q => String(q.id)))));
+        const nextUsed = Array.from(new Set(
+          usedIds.concat(roundQuestions.map(q => String(q.id)))
+        ));
         usedCountAfterSelection = nextUsed.length;
         completedAll100ThisRound = nextUsed.length >= questionBank.length;
         setUsedIds(nextUsed);
