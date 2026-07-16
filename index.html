@@ -601,7 +601,7 @@
       <div class="center-panel">
         <div class="spinner"></div>
         <h1 id="bootTitle" class="main-title">กำลังโหลด...</h1>
-        <p id="bootText" class="subtitle">กำลังโหลด CONFIG และสัตว์ 100 ชนิด</p>
+        <p id="bootText" class="subtitle">กำลังโหลด CONFIG และสัตว์ 150 ชนิด</p>
         <div id="bootError" class="error-box hidden"></div>
       </div>
     </section>
@@ -709,7 +709,7 @@
      * ใส่ลิงก์ Apps Script Web App ที่ลงท้าย /exec ตรงนี้
      * ========================================================= */
     const GAS_URL = 'https://script.google.com/a/macros/anubanamnat.ac.th/s/AKfycbz830iAGNWRidGY2qSVq4pepa0puhbL5Z-gy0JXacK6DmYe8zMpeSArCstn9o7Z7zc-iw/exec';
-    const DEFAULT_SET = 'vertebrate5_100';
+    const DEFAULT_SET = 'vertebrate5_150';
 
     const $ = (selector) => document.querySelector(selector);
     const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -933,7 +933,7 @@
       el.startBtn.textContent = cfg('START_BUTTON_TEXT', 'เริ่มเกม');
       el.startNote.textContent = fingerCopy(cfg('START_NOTE_TEXT', 'แนะนำให้เปิดแนวนอน\nชูนิ้วชี้ไปที่คำตอบ แล้วค้างไว้จนเส้นวิ่งครบรอบ'));
       el.loadingTitle.textContent = cfg('LOADING_CAMERA_TEXT', 'กำลังเปิดกล้อง...');
-      el.loadingSubtitle.textContent = fingerCopy(cfg('LOADING_SUBTITLE_TEXT', 'เตรียมกล้อง สัตว์ 100 ชนิด และระบบจับนิ้วชี้'));
+      el.loadingSubtitle.textContent = fingerCopy(cfg('LOADING_SUBTITLE_TEXT', 'เตรียมกล้อง สัตว์ 150 ชนิด และระบบจับนิ้วชี้'));
       el.finishTitle.textContent = cfg('FINISH_TEXT', 'จบเกม');
       el.playAgainBtn.textContent = cfg('PLAY_AGAIN_BUTTON_TEXT', 'เริ่มเกมใหม่');
       el.restartBtn.textContent = cfg('PLAY_AGAIN_BUTTON_TEXT', 'เริ่มเกมใหม่');
@@ -1489,7 +1489,10 @@
 
       const correctCard = el.answerCards.find(card => card.dataset.key === correctKey);
       const selectedCard = el.answerCards.find(card => card.dataset.key === selectedKey);
-      if (correctCard) correctCard.classList.add('correct');
+
+      // แสดงสีเขียวเฉพาะเมื่อตอบถูกเท่านั้น
+      // เมื่อตอบผิดหรือหมดเวลา จะไม่เฉลยคำตอบทั้งจากข้อความและสีของกล่อง
+      if (isCorrect && correctCard) correctCard.classList.add('correct');
       if (selectedCard && !isCorrect) selectedCard.classList.add('wrong');
 
       if (isCorrect) {
@@ -1498,10 +1501,10 @@
         showFeedback(cfg('CORRECT_TEXT', 'ถูกต้อง!'), 'good');
         audio && audio.play('correct');
       } else if (isTimeout) {
-        showFeedback(`${cfg('TIMEOUT_TEXT', 'หมดเวลา!')}\nคำตอบ: ${correctKey}`, 'bad');
+        showFeedback(cfg('TIMEOUT_TEXT', 'หมดเวลา!'), 'bad');
         audio && audio.play('wrong');
       } else {
-        showFeedback(`${cfg('WRONG_TEXT', 'ยังไม่ถูก')}\nคำตอบ: ${correctKey}`, 'bad');
+        showFeedback(cfg('WRONG_TEXT', 'ยังไม่ถูก'), 'bad');
         audio && audio.play('wrong');
       }
 
@@ -1544,7 +1547,7 @@
       if (completedAll100ThisRound) {
         el.cycleNote.textContent = cfg(
           'COMPLETED_100_TEXT',
-          'เล่นครบสัตว์ทั้ง 100 ชนิดแล้ว รอบถัดไปจะเริ่มสุ่มชุดใหม่'
+          'เล่นครบสัตว์ทั้ง 150 ชนิดแล้ว รอบถัดไปจะเริ่มสุ่มชุดใหม่'
         );
       } else {
         el.cycleNote.textContent = `ใช้คำถามแล้ว ${usedCountAfterSelection} จาก ${questionBank.length} ชนิด • รอบที่ ${currentRoundNo}`;
@@ -1619,10 +1622,15 @@
         oscillator.type = type;
         oscillator.frequency.setValueAtTime(frequency, start);
         gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.exponentialRampToValueAtTime(
-          Math.max(0.0001, volume * numCfg('SOUND_VOLUME', .65)),
-          start + .012
+        const channelBoost = channel === 'sfx'
+          ? numCfg('SFX_VOLUME_BOOST', 1.65)
+          : 1;
+        const peakVolume = clamp(
+          volume * numCfg('SOUND_VOLUME', .65) * channelBoost,
+          0.0001,
+          0.42
         );
+        gain.gain.exponentialRampToValueAtTime(peakVolume, start + .008);
         gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
         oscillator.connect(gain).connect(this.ctx.destination);
         oscillator.start(start);
@@ -1667,12 +1675,18 @@
         } else if (name === 'tick') {
           this.tone(860, .07, 'square', .055);
         } else if (name === 'correct') {
-          this.tone(523.25, .13, 'triangle', .13);
-          this.tone(659.25, .15, 'triangle', .12, .09);
-          this.tone(783.99, .23, 'triangle', .12, .18);
+          // เสียงตอบถูกแบบพุ่งขึ้น เป็นคอร์ดสว่างและเด่นกว่าดนตรีพื้นหลัง
+          this.tone(523.25, .16, 'square', .18);
+          this.tone(659.25, .18, 'triangle', .19, .07);
+          this.tone(783.99, .22, 'square', .17, .14);
+          this.tone(1046.50, .34, 'triangle', .15, .22);
+          this.tone(1318.51, .20, 'sine', .10, .31);
         } else if (name === 'wrong') {
-          this.tone(220, .18, 'sawtooth', .095);
-          this.tone(155, .30, 'sawtooth', .09, .11);
+          // เสียงตอบผิดแบบต่ำและตกลง ให้แยกจากเสียงตอบถูกอย่างชัดเจน
+          this.tone(246.94, .14, 'square', .18);
+          this.tone(196.00, .22, 'sawtooth', .17, .08);
+          this.tone(146.83, .34, 'sawtooth', .16, .18);
+          this.tone(98.00, .28, 'square', .12, .32);
         }
       }
 
